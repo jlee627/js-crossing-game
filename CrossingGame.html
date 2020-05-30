@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Crossing Game</title>
+    <!-- Style Guide -->
+    <style type="text/css">
+        canvas { border: 2px solid black; background-color: red;}
+    </style>
+</head>
+<body>
+    <h1>Crossing Game</h1>
+    <!-- Main game screen -->
+    <canvas id='myCanvas' width=1000 height=500></canvas>
+    
+    <script type="text/javascript">
+        // Grab the context of the canvas
+        var canvas = document.getElementById('myCanvas');
+        var ctx = canvas.getContext('2d');
+        
+        // Constant variables
+        let screenWidth = 1000;
+        let screenHeight = 500;
+        let width = 50;
+        var isGameLive = true;
+        
+        var isRightKeyPressed = false;
+        var isLeftKeyPressed = false;
+        
+        // Class for the characters in the game
+        class GameCharacter {
+            constructor(x, y, width, height, color, speed) {
+                this.x = x;
+                this.y = y;
+                this.width = width;
+                this.height = height;
+                this.color = color;
+                this.speed = speed;
+                this.maxSpeed = 4;
+            } // End of GameCharacter constructor
+            
+                // Functions to move character in respective dimensions
+                moveVertically() {
+                    // Reverse direction if object gets to edge of screen
+                    if (this.y > screenHeight - 100 || this.y < 50) {
+                        this.speed = -this.speed;
+                    }
+                    
+                    this.y += this.speed;
+                }
+                moveHorizontally() {
+                    this.x += this.speed;
+                }
+        } // End of GameCharacter Class
+        
+            // Array of game character enemies
+            var enemies = [
+                new GameCharacter(200,225,width,width,"rgb(0,0,255)",2),
+                new GameCharacter(450,screenHeight-100,width,width,"rgb(0,0,255)",3),
+                new GameCharacter(700,50,width,width,"rgb(0,0,255)",4),
+            ];
+        
+            var player = new GameCharacter(50, 225, width, width, "rgb(0,255,0)",0);
+        
+            var finishLine = new GameCharacter(900, 225, width, width, "rgb(0,0,0)",0);
+        
+            var sprites = {};
+        
+            var loadSprites = function() {
+                sprites.background = new Image();
+                sprites.background.src = 'images/floor.png';
+                
+                sprites.player = new Image();
+                sprites.player.src = 'images/hero.png';
+                
+                sprites.enemy = new Image();
+                sprites.enemy.src = 'images/enemy.png';
+                
+                sprites.finishLine = new Image();
+                sprites.finishLine.src = 'images/chest.png';
+            }
+
+            // Detect when a key is pressed
+            document.onkeydown = function(event) {
+                /* <<PRE CHANGE - Commented out to be more responsive>>
+                
+                let keyPressed = event.keyCode;
+                
+                // On right arrow press move right
+                if (keyPressed == 39) {
+                    
+                    player.speed = player.maxSpeed;
+                }
+                
+                // On left arrow press move left
+                if (keyPressed == 37) {
+                    player.speed = -player.maxSpeed;
+                }
+                */
+                
+                let keyPressed = event.keyCode;
+                
+                // On right arrow press move right
+                if (keyPressed == 39) {
+                    isRightKeyPressed = true;
+                    player.speed = player.maxSpeed;
+                }
+                
+                // On left arrow press move left
+                if (keyPressed == 37) {
+                    isLeftKeyPressed = true;
+                    player.speed = -player.maxSpeed;
+                }
+                
+            }
+        
+            // On key release, stop movement
+            document.onkeyup = function(event) {
+                /* <<PRE CHANGE - Commented out to be more responsive>>
+                var keyPressed = event.keyCode;
+                if (keyPressed == 39 || keyPressed == 37) {
+                    player.speed = 0;
+                }
+                */
+                var keyUp = event.keyCode;
+                if (keyUp == 39) {
+                    isRightKeyPressed = false;
+                    if (isLeftKeyPressed) {
+                        player.speed = -player.maxSpeed;
+                    }
+                    else {
+                        player.speed = 0;
+                    }
+                }
+                else if(keyUp == 37) {
+                    isLeftKeyPressed = false;
+                    
+                    if (isRightKeyPressed) {
+                        player.speed = player.maxSpeed;
+                    }
+                    else {
+                        player.speed = 0;
+                    }
+                }
+                
+                
+            }
+            
+            // Compares locations to check if there are any overlap in x or y axis
+            var checkCollisions = function(rect1, rect2) {
+                var xOverlap = Math.abs(rect1.x-rect2.x) <= Math.max(rect1.width, rect2.width);
+                
+                var yOverlap = Math.abs(rect1.y-rect2.y) <= Math.max(rect1.height, rect2.height);
+                
+                return xOverlap && yOverlap;
+            }
+            
+            // Draw things onto the canvas
+            var draw = function() {
+                // Clear canvas (should be first step of any draw function)
+                ctx.clearRect(0,0,screenWidth,screenHeight);
+                
+                // Draws/fills in colors for player
+                // ctx.fillStyle = player.color;
+                // ctx.fillRect(player.x,player.y,player.width,player.height);
+                
+                ctx.drawImage(sprites.background, 0,0);
+                ctx.drawImage(sprites.player, player.x,player.y);
+                ctx.drawImage(sprites.finishLine, finishLine.x,finishLine.y);
+                
+                // Draws/fills in colors for each enemies
+                enemies.forEach(function(element) {
+                    //ctx.fillStyle = element.color;
+                    //ctx.fillRect(element.x,element.y,element.width,element.height);
+                    ctx.drawImage(sprites.enemy,element.x,element.y);
+                });
+                
+                //ctx.fillStyle = finishLine.color;
+                //ctx.fillRect(finishLine.x,finishLine.y,
+                             //finishLine.width,finishLine.height);
+            } // End of draw function
+
+            // Updates movements of characters and checks for collision
+            var update = function(){
+                player.moveHorizontally();
+                
+                enemies.forEach(function(element){
+                    // End game if collide with enemy
+                    if (checkCollisions(player,element)) {
+                        endGameLogic("game over");
+                    }
+                    element.moveVertically();  
+                });
+                
+                if (checkCollisions(player,finishLine)) {
+                    // End game if player gets to finish line
+                    endGameLogic("victory!");
+                }
+            } // End of Update function
+
+            var endGameLogic = function(text) {
+                isGameLive = false;
+                alert(text);
+                window.location = "";
+            }
+            
+            // Game loop that updates movements/graphics/collisions/etc 
+            var step = function() {
+                // Update movements
+                update();
+                // Draw updated movements
+                draw();
+                
+                // Perform next animation step (simulates loop behavior)
+                if (isGameLive == true) {
+                    window.requestAnimationFrame(step);
+                }
+            } // End of step function
+
+            loadSprites();
+            step();
+        </script>
+    </body>
+</html>
